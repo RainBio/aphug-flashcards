@@ -5,12 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
 <style>
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    -webkit-tap-highlight-color: transparent;
-  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   body {
     font-family: system-ui, -apple-system, sans-serif;
@@ -61,10 +56,7 @@
     font-size: 14px;
   }
 
-  .card-area {
-    perspective: 1000px;
-    margin: 12px 0;
-  }
+  .card-area { perspective: 1000px; margin: 12px 0; }
 
   .card-inner {
     position: relative;
@@ -74,39 +66,27 @@
     transition: transform 0.4s ease;
   }
 
-  .card-inner.flipped {
-    transform: rotateY(180deg);
-  }
+  .card-inner.flipped { transform: rotateY(180deg); }
 
   .card-face {
     position: absolute;
     width: 100%;
     height: 100%;
     backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-
     border-radius: 16px;
     background: white;
     border: 1px solid #ddd;
-
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-
     padding: 20px;
     text-align: center;
   }
 
-  .card-back {
-    transform: rotateY(180deg);
-  }
+  .card-back { transform: rotateY(180deg); }
 
-  .card-label {
-    font-size: 12px;
-    opacity: 0.6;
-    margin-bottom: 10px;
-  }
+  .card-label { font-size: 12px; opacity: 0.6; margin-bottom: 10px; }
 
   .card-term {
     font-size: clamp(18px, 4vw, 26px);
@@ -132,6 +112,12 @@
     text-align: center;
     opacity: 0.7;
   }
+
+  .nav-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
 </style>
 </head>
 
@@ -141,9 +127,9 @@
   <div class="unit-tabs" id="unitTabs"></div>
 
   <div class="top-row">
-    <button id="shuffleBtn">Shuffle</button>
-    <button id="resetBtn">Reset</button>
-    <button id="flipBtn">Flip</button>
+    <button onclick="shuffleDeck()">Shuffle</button>
+    <button onclick="resetDeck()">Reset</button>
+    <button onclick="toggleFlip()">Flip</button>
   </div>
 
   <div class="card-area" id="cardArea">
@@ -162,7 +148,13 @@
     </div>
   </div>
 
-  <div class="hint">Tap to flip • Swipe left/right to navigate</div>
+  <!-- LEFT / RIGHT BUTTONS (requested) -->
+  <div class="nav-row">
+    <button onclick="prev()">← Prev</button>
+    <button onclick="next()">Next →</button>
+  </div>
+
+  <div class="hint">Tap to flip • Swipe left/right also works</div>
   <div class="progress" id="progress"></div>
 
 </div>
@@ -171,17 +163,104 @@
 const ALL = [
   {u:"Unit 1",t:"Spatial distribution",d:"Arrangement of a phenomenon across Earth."},
   {u:"Unit 1",t:"GIS",d:"System for capturing and analyzing spatial data."},
-  {u:"Unit 2",t:"DTM Stage 2",d:"High birth rate, falling death rate, rapid growth."},
-  {u:"Unit 3",t:"Culture",d:"Shared beliefs, values, and practices."}
+  {u:"Unit 1",t:"GPS",d:"Satellite system for absolute location."},
+  {u:"Unit 1",t:"Remote sensing",d:"Collecting Earth data without contact."},
+  {u:"Unit 1",t:"Cultural landscape",d:"Human-modified visible environment."},
+  {u:"Unit 1",t:"Relocation diffusion",d:"Spread via movement of people."},
+  {u:"Unit 1",t:"Contagious diffusion",d:"Rapid spread through contact."},
+  {u:"Unit 1",t:"Hierarchical diffusion",d:"Spread through hierarchy."},
+  {u:"Unit 1",t:"Stimulus diffusion",d:"Idea spreads but changes form."},
+  {u:"Unit 1",t:"Distance decay",d:"Interaction decreases with distance."},
+  {u:"Unit 1",t:"Time-space compression",d:"Distance feels shorter due to tech."},
+  {u:"Unit 1",t:"Absolute location",d:"Exact coordinates."},
+  {u:"Unit 1",t:"Relative location",d:"Location compared to others."},
+  {u:"Unit 1",t:"Formal region",d:"Shared characteristics region."},
+  {u:"Unit 1",t:"Functional region",d:"Region organized around a node."},
+  {u:"Unit 1",t:"Perceptual region",d:"Based on perception."},
+
+  {u:"Unit 2",t:"Arithmetic density",d:"Population per land area."},
+  {u:"Unit 2",t:"Physiological density",d:"Population per arable land."},
+  {u:"Unit 2",t:"Agricultural density",d:"Farmers per arable land."},
+  {u:"Unit 2",t:"DTM Stage 2",d:"High growth stage."},
+  {u:"Unit 2",t:"DTM Stage 3",d:"Slowing growth."},
+  {u:"Unit 2",t:"DTM Stage 4",d:"Stable population."},
+  {u:"Unit 2",t:"TFR",d:"Average children per woman."},
+  {u:"Unit 2",t:"CBR",d:"Births per 1000 people."},
+  {u:"Unit 2",t:"CDR",d:"Deaths per 1000 people."},
+  {u:"Unit 2",t:"NIR",d:"Natural population growth."},
+  {u:"Unit 2",t:"Migration",d:"Movement of people."},
+  {u:"Unit 2",t:"Push factors",d:"Forces that push people away."},
+  {u:"Unit 2",t:"Pull factors",d:"Forces that attract people."},
+
+  {u:"Unit 3",t:"Culture",d:"Shared beliefs and practices."},
+  {u:"Unit 3",t:"Ethnocentrism",d:"Judging other cultures by your own."},
+  {u:"Unit 3",t:"Cultural relativism",d:"Judging culture by its own standards."},
+  {u:"Unit 3",t:"Language family",d:"Group of related languages."},
+  {u:"Unit 3",t:"Lingua franca",d:"Common trade language."},
+  {u:"Unit 3",t:"Religion universalizing",d:"Seeks global conversion."},
+  {u:"Unit 3",t:"Ethnic religion",d:"Tied to a specific group."},
+  {u:"Unit 3",t:"Acculturation",d:"Cultural mixing."},
+  {u:"Unit 3",t:"Assimilation",d:"Full cultural absorption."},
+
+  {u:"Unit 4",t:"State",d:"Independent political unit."},
+  {u:"Unit 4",t:"Nation-state",d:"One nation = one state."},
+  {u:"Unit 4",t:"Stateless nation",d:"Nation without state."},
+  {u:"Unit 4",t:"Sovereignty",d:"Full control over territory."},
+  {u:"Unit 4",t:"Federal state",d:"Power shared regions/central."},
+  {u:"Unit 4",t:"Unitary state",d:"Centralized power system."},
+  {u:"Unit 4",t:"Gerrymandering",d:"Manipulating district borders."},
+
+  {u:"Unit 5",t:"Shifting cultivation",d:"Slash and burn farming."},
+  {u:"Unit 5",t:"Plantation agriculture",d:"Large cash crop farms."},
+  {u:"Unit 5",t:"Green Revolution",d:"High-yield crop tech boom."},
+  {u:"Unit 5",t:"Monoculture",d:"Single crop farming."},
+  {u:"Unit 5",t:"Polyculture",d:"Multiple crops farming."},
+
+  {u:"Unit 6",t:"Urbanization",d:"Growth of cities."},
+  {u:"Unit 6",t:"Suburbanization",d:"Growth of suburbs."},
+  {u:"Unit 6",t:"CBD",d:"City commercial core."},
+  {u:"Unit 6",t:"Gentrification",d:"Wealthier residents move in."},
+  {u:"Unit 6",t:"Urban sprawl",d:"Low-density city expansion."},
+
+  {u:"Unit 7",t:"GDP",d:"Total economic output."},
+  {u:"Unit 7",t:"HDI",d:"Human development index."},
+  {u:"Unit 7",t:"Primary sector",d:"Raw materials extraction."},
+  {u:"Unit 7",t:"Secondary sector",d:"Manufacturing goods."},
+  {u:"Unit 7",t:"Tertiary sector",d:"Services economy."},
+  {u:"Unit 7",t:"Core-periphery",d:"Global inequality model."}
 ];
 
 let deck = [...ALL];
 let i = 0;
 let flipped = false;
+let activeUnit = "All";
+
+function renderTabs() {
+  const units = ["All","Unit 1","Unit 2","Unit 3","Unit 4","Unit 5","Unit 6","Unit 7"];
+  const el = document.getElementById("unitTabs");
+  el.innerHTML = "";
+
+  units.forEach(u => {
+    const b = document.createElement("button");
+    b.className = "unit-tab" + (u === activeUnit ? " active" : "");
+    b.textContent = u;
+    b.onclick = () => {
+      activeUnit = u;
+      deck = u === "All" ? [...ALL] : ALL.filter(x => x.u === u);
+      i = 0;
+      render();
+      renderTabs();
+    };
+    el.appendChild(b);
+  });
+}
 
 function render() {
+  if (!deck.length) return;
+
   document.getElementById("term").textContent = deck[i].t;
   document.getElementById("def").textContent = deck[i].d;
+
   document.getElementById("progress").textContent =
     `${i + 1} / ${deck.length}`;
 }
@@ -205,35 +284,33 @@ function toggleFlip() {
   document.getElementById("cardInner").classList.toggle("flipped");
 }
 
-document.getElementById("cardArea").onclick = toggleFlip;
-document.getElementById("flipBtn").onclick = toggleFlip;
-document.getElementById("shuffleBtn").onclick = () => {
+function shuffleDeck() {
   deck.sort(() => Math.random() - 0.5);
   i = 0;
   render();
-};
-document.getElementById("resetBtn").onclick = () => {
-  deck = [...ALL];
+}
+
+function resetDeck() {
+  deck = activeUnit === "All" ? [...ALL] : ALL.filter(x => x.u === activeUnit);
   i = 0;
   render();
-};
+}
 
-// Swipe support
+/* swipe */
 let startX = 0;
-
 document.getElementById("cardArea").addEventListener("touchstart", e => {
   startX = e.touches[0].clientX;
 });
 
 document.getElementById("cardArea").addEventListener("touchend", e => {
-  let endX = e.changedTouches[0].clientX;
-  let diff = endX - startX;
-
-  if (Math.abs(diff) > 40) {
-    diff < 0 ? next() : prev();
-  }
+  const dx = e.changedTouches[0].clientX - startX;
+  if (Math.abs(dx) > 50) dx < 0 ? next() : prev();
 });
 
+/* tap flip */
+document.getElementById("cardArea").onclick = toggleFlip;
+
+renderTabs();
 render();
 </script>
 
