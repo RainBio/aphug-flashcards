@@ -1,0 +1,456 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); }
+  .app { padding: 1rem 0; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
+  select { flex: 1; min-width: 160px; }
+  .card-area { perspective: 1000px; margin: 1rem 0; cursor: pointer; }
+  .card-inner {
+    position: relative; width: 100%; min-height: 220px;
+    transform-style: preserve-3d; transition: transform 0.45s ease;
+  }
+  .card-inner.flipped { transform: rotateY(180deg); }
+  .card-face {
+    position: absolute; width: 100%; min-height: 220px;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    border-radius: var(--border-radius-lg);
+    border: 0.5px solid var(--color-border-tertiary);
+    background: var(--color-background-primary);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 2rem 2rem; text-align: center;
+  }
+  .card-back { transform: rotateY(180deg); }
+  .card-label {
+    font-size: 12px; color: var(--color-text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+  }
+  .card-term { font-size: 22px; font-weight: 500; color: var(--color-text-primary); line-height: 1.3; }
+  .card-def { font-size: 14px; color: var(--color-text-secondary); line-height: 1.7; max-width: 560px; }
+  .card-unit-tag {
+    margin-top: 1rem; font-size: 11px; color: var(--color-text-tertiary);
+    background: var(--color-background-secondary);
+    padding: 3px 10px; border-radius: 999px;
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 1rem; }
+  .nav button { min-width: 90px; }
+  .progress-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .progress-bar-bg { width: 100%; height: 4px; background: var(--color-background-secondary); border-radius: 999px; overflow: hidden; }
+  .progress-bar { height: 100%; border-radius: 999px; background: var(--color-text-secondary); transition: width 0.3s; }
+  .progress-label { font-size: 13px; color: var(--color-text-secondary); }
+  .hint { text-align: center; font-size: 12px; color: var(--color-text-tertiary); margin-top: 0.5rem; }
+  .unit-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
+  .unit-tab {
+    font-size: 13px; padding: 4px 12px; border-radius: 999px;
+    border: 0.5px solid var(--color-border-secondary);
+    background: var(--color-background-primary);
+    color: var(--color-text-secondary); cursor: pointer;
+  }
+  .unit-tab.active {
+    background: var(--color-text-primary);
+    color: var(--color-background-primary);
+    border-color: var(--color-text-primary);
+  }
+  .top-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+</style>
+
+<div class="app">
+  <div class="unit-tabs" id="unitTabs"></div>
+  <div class="top-row">
+    <button id="shuffleBtn">Shuffle</button>
+    <button id="resetBtn">Reset order</button>
+    <button id="flipAllBtn">Show answer</button>
+  </div>
+
+  <div class="card-area" id="cardArea">
+    <div class="card-inner" id="cardInner">
+      <div class="card-face card-front">
+        <div class="card-label">Term</div>
+        <div class="card-term" id="termText"></div>
+        <div class="card-unit-tag" id="termUnit"></div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-label">Definition</div>
+        <div class="card-def" id="defText"></div>
+      </div>
+    </div>
+  </div>
+  <div class="hint" id="hintText">Click card to flip</div>
+
+  <div class="nav">
+    <button id="prevBtn">← Prev</button>
+    <div class="progress-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="progress-label" id="progressLabel"></div>
+    </div>
+    <button id="nextBtn">Next →</button>
+  </div>
+</div>
+
+<script>
+const ALL = [
+  {u:"Unit 1",t:"Spatial distribution",d:"The arrangement of a phenomenon across Earth's surface, described by density, concentration, and pattern."},
+  {u:"Unit 1",t:"Large-scale vs. small-scale map",d:"Large-scale maps show a small area in great detail (e.g., a city); small-scale maps show a large area with less detail (e.g., a continent). Large scale refers to the representative fraction, not the area shown."},
+  {u:"Unit 1",t:"Reference map",d:"A map that shows the locations of geographic features such as roads, borders, cities, and landforms; used for navigation and general location (e.g., road maps, political maps)."},
+  {u:"Unit 1",t:"GIS",d:"A computer-based system that captures, stores, analyzes, and displays geographic/spatial data in layered maps, allowing users to visualize patterns and relationships."},
+  {u:"Unit 1",t:"GPS",d:"A satellite-based navigation system that determines the precise absolute location (latitude and longitude) of a receiver anywhere on Earth."},
+  {u:"Unit 1",t:"Remote sensing",d:"The collection of data about Earth's surface from satellites or aircraft without direct physical contact; used to create maps and monitor environmental change."},
+  {u:"Unit 1",t:"Cultural landscape",d:"The visible, human-modified landscape that reflects the culture of the people who shaped it; includes buildings, roads, farms, and other human imprints on the natural environment."},
+  {u:"Unit 1",t:"Relocation diffusion",d:"The spread of an idea, innovation, or trait through the physical movement of people from one place to another (e.g., immigrants bringing their religion to a new country)."},
+  {u:"Unit 1",t:"Expansion diffusion – contagious",d:"Rapid, widespread diffusion of a feature through a population via direct contact, spreading outward in all directions from the hearth (e.g., early spread of Islam)."},
+  {u:"Unit 1",t:"Expansion diffusion – hierarchical",d:"Diffusion that leapfrogs from large cities to smaller cities and towns, spreading down a hierarchy rather than uniformly outward (e.g., fashion trends from NYC to smaller cities)."},
+  {u:"Unit 1",t:"Expansion diffusion – stimulus",d:"A specific trait fails to diffuse but the underlying idea behind it does; the adopting culture adapts the concept to fit local needs (e.g., fast food concepts spreading globally with localized menus)."},
+  {u:"Unit 1",t:"Distance decay",d:"The principle that interaction between two places decreases as the distance between them increases; the farther apart places are, the less influence they have on each other."},
+  {u:"Unit 1",t:"Time-space compression",d:"The perceived shrinking of distance due to improvements in transportation and communication technology, making far-away places feel closer (coined by David Harvey)."},
+  {u:"Unit 1",t:"Relative location",d:"A location described in relation to other places (e.g., 'New Jersey is southwest of New York City')."},
+  {u:"Unit 1",t:"Absolute location",d:"The exact position of a place on Earth's surface, expressed using a coordinate system such as latitude and longitude."},
+  {u:"Unit 1",t:"Place (geographic concept)",d:"A specific location that has been given meaning by humans through experience, memory, and emotion; combines site and situation with human meaning."},
+  {u:"Unit 1",t:"Sense of place",d:"The feelings and emotions that people associate with a particular location; the subjective, experiential attachment humans develop toward places."},
+  {u:"Unit 1",t:"Activity space",d:"The space within which people move around in their daily lives (e.g., home, work, grocery store, gym); the geographic area of routine movement."},
+  {u:"Unit 1",t:"Site",d:"The absolute, physical characteristics of a place, including its terrain, soil, climate, and water sources."},
+  {u:"Unit 1",t:"Situation",d:"The location of a place relative to its surrounding places, regions, and geographic features; helps explain a place's importance or function."},
+  {u:"Unit 1",t:"Formal region",d:"An area defined by one or more shared characteristics that are uniform throughout (e.g., the Corn Belt defined by corn production, or a country defined by a shared government)."},
+  {u:"Unit 1",t:"Functional/nodal region",d:"An area organized around a central node or hub and defined by the connections or flows between the center and surrounding areas (e.g., a metropolitan area, a TV station's broadcast range)."},
+  {u:"Unit 1",t:"Perceptual/vernacular region",d:"An area defined by people's subjective feelings and perceptions rather than objective data; exists in the mind (e.g., 'the South,' 'the Middle East,' 'the Bible Belt')."},
+  {u:"Unit 1",t:"Hearth",d:"The place of origin of an innovation, idea, culture, or religion from which it subsequently diffuses outward."},
+  {u:"Unit 1",t:"Choropleth map",d:"A thematic map that uses varying shades or colors within predefined areas to represent the intensity of a variable (e.g., population density per country)."},
+  {u:"Unit 1",t:"Thematic map",d:"A map that focuses on the spatial distribution of a specific theme or topic (e.g., climate, religion, income), as opposed to a general reference map."},
+  {u:"Unit 1",t:"Isoline map",d:"A map that uses lines connecting points of equal value to show continuous data, such as elevation (contour lines) or temperature (isotherms)."},
+  {u:"Unit 1",t:"Flow-line map",d:"A map that uses lines of varying width to show the movement of people, goods, or information between places; the thicker the line, the greater the volume."},
+  {u:"Unit 1",t:"Dot distribution map",d:"A map that uses dots to represent the frequency or presence of a phenomenon in an area; each dot represents a specific quantity."},
+  {u:"Unit 1",t:"Graduated symbol map",d:"A map that uses symbols of varying sizes to represent the quantity or magnitude of a phenomenon at specific locations (e.g., circles of different sizes to show city populations)."},
+  {u:"Unit 1",t:"Cartogram",d:"A map in which the size of each geographic unit is distorted to be proportional to the value of a particular variable (e.g., country sizes reflect their GDP)."},
+  {u:"Unit 1",t:"Mental map",d:"An internal, subjective representation of the world or a place based on an individual's knowledge, perception, and experience; reflects personal geographic understanding."},
+  {u:"Unit 1",t:"Cartography",d:"The art and science of making maps, including their design, production, and study."},
+  {u:"Unit 1",t:"Map projections & distortion",d:"A method of representing the curved surface of the Earth on a flat map; all projections distort some combination of shape, area, distance, and direction (e.g., Mercator, Robinson, Peters)."},
+  {u:"Unit 1",t:"Qualitative vs. quantitative data",d:"Qualitative data is descriptive and non-numerical (e.g., interviews, observations); quantitative data is numerical and measurable (e.g., population counts, GDP figures)."},
+  {u:"Unit 1",t:"Spatial perspective",d:"Interpreting phenomena by considering how and why things are arranged across Earth's surface; a core approach in geographic thinking that examines location, distribution, and pattern."},
+  {u:"Unit 1",t:"Environmental determinism",d:"The largely discredited theory that the physical environment, especially climate, controls human behavior and determines the development of cultures and societies."},
+  {u:"Unit 1",t:"Possibilism",d:"The theory that the physical environment limits but does not fully determine human behavior; humans have the ability to choose from multiple possibilities within the constraints of nature."},
+  {u:"Unit 2",t:"Arithmetic density",d:"The total number of people divided by the total land area; the most basic measure of population density (also called crude density)."},
+  {u:"Unit 2",t:"Physiological density",d:"The number of people per unit of arable (farmable) land; reflects the pressure people place on productive land."},
+  {u:"Unit 2",t:"Agricultural density",d:"The number of farmers per unit of arable land; indicates the efficiency of a country's agricultural system (lower = more mechanized)."},
+  {u:"Unit 2",t:"DTM Stage 1 – High stationary",d:"Both CBR and CDR are high and roughly equal, resulting in a stable, low population; typical of pre-industrial, subsistence societies. No country remains in Stage 1 today."},
+  {u:"Unit 2",t:"DTM Stage 2 – Early expanding",d:"CBR remains high while CDR falls rapidly due to improved medicine, sanitation, and food supply; population grows quickly. Associated with early industrialization."},
+  {u:"Unit 2",t:"DTM Stage 3 – Late expanding",d:"CBR begins to fall as CDR continues to drop; population growth slows. Associated with urbanization, education, and women entering the workforce."},
+  {u:"Unit 2",t:"DTM Stage 4 – Low stationary",d:"Both CBR and CDR are low; population stabilizes at a high level. Typical of most developed countries (e.g., United States, France)."},
+  {u:"Unit 2",t:"DTM Stage 5 – Declining",d:"CBR falls below CDR, leading to natural population decrease; associated with aging populations and very low birth rates (e.g., Japan, Germany). Recognized in some models."},
+  {u:"Unit 2",t:"Total Fertility Rate (TFR)",d:"The average number of children a woman would have over her lifetime if current birth rates remained constant; replacement-level TFR is approximately 2.1."},
+  {u:"Unit 2",t:"Infant Mortality Rate (IMR)",d:"The number of deaths of infants under one year old per 1,000 live births in a given year; a key indicator of a country's healthcare quality and development level."},
+  {u:"Unit 2",t:"Life expectancy",d:"The average number of years a person born in a given year can expect to live, based on current mortality rates; a key indicator of quality of life and development."},
+  {u:"Unit 2",t:"Crude Birth Rate (CBR)",d:"The total number of live births per 1,000 people in a population in a given year."},
+  {u:"Unit 2",t:"Crude Death Rate (CDR)",d:"The total number of deaths per 1,000 people in a population in a given year."},
+  {u:"Unit 2",t:"Natural Increase Rate (NIR)",d:"The percentage by which a population grows in a year, calculated as CBR minus CDR (not including migration); also called rate of natural increase (RNI)."},
+  {u:"Unit 2",t:"Doubling time",d:"The number of years it takes for a population to double in size, calculated using the Rule of 70 (70 ÷ growth rate)."},
+  {u:"Unit 2",t:"Population pyramid",d:"A bar graph displaying the age and sex distribution of a population; the shape reveals whether a country is growing, stable, or shrinking."},
+  {u:"Unit 2",t:"Population momentum",d:"The tendency for a population to continue growing even after fertility rates fall to replacement level, due to the large proportion of young people who have yet to reach reproductive age."},
+  {u:"Unit 2",t:"Sex ratio",d:"The number of males per 100 females in a population; imbalances can result from gender-selective migration, war, or cultural son preference."},
+  {u:"Unit 2",t:"Dependency ratio",d:"The ratio of people not in the labor force (under 15 or over 64) to those who are (15–64); indicates the economic burden on the working-age population."},
+  {u:"Unit 2",t:"Carrying capacity",d:"The maximum population size that an environment can sustain indefinitely given available resources; a concept debated in terms of its applicability to human populations."},
+  {u:"Unit 2",t:"Malthusian theory / Neo-Malthusianism",d:"Malthus argued that population grows exponentially while food supply grows arithmetically, leading to famine. Neo-Malthusians extend this to include resource depletion and environmental collapse."},
+  {u:"Unit 2",t:"Overpopulation / underpopulation",d:"Overpopulation: a population exceeds its environment's carrying capacity. Underpopulation: too few people to efficiently use or develop a region's resources."},
+  {u:"Unit 2",t:"Pronatalist vs. antinatalist policies",d:"Pronatalist policies encourage higher birth rates (e.g., France offering financial incentives). Antinatalist policies discourage birth rates (e.g., China's former One-Child Policy)."},
+  {u:"Unit 2",t:"Migration",d:"The movement of people from one place to another with the intention of settling, either temporarily or permanently."},
+  {u:"Unit 2",t:"Push/pull factors",d:"Push factors drive people away from their origin (e.g., war, famine). Pull factors attract people to a destination (e.g., job opportunities, safety, better climate)."},
+  {u:"Unit 2",t:"Forced vs. voluntary migration",d:"Voluntary migration: people choose to move. Forced migration: people are compelled to move due to conflict, persecution, environmental disaster, or coercion (e.g., the transatlantic slave trade)."},
+  {u:"Unit 2",t:"Immigration vs. emigration",d:"Immigration is the movement of people into a country (in-migration). Emigration is the movement of people out of a country (out-migration)."},
+  {u:"Unit 2",t:"Refugee",d:"A person who has been forced to flee their home country due to persecution, war, or violence, and who has been formally recognized under international law (UNHCR definition)."},
+  {u:"Unit 2",t:"Asylum seeker",d:"A person who has fled their home country and applied for legal protection (asylum) in another country but has not yet received an official decision."},
+  {u:"Unit 2",t:"IDPs (Internally Displaced Persons)",d:"People who have been forced to flee their homes due to conflict or disaster but remain within their own country's borders; not legally classified as refugees."},
+  {u:"Unit 2",t:"Brain drain",d:"The emigration of highly skilled, educated, or talented individuals from a country (usually developing) to another (usually developed), leaving the origin country with reduced human capital."},
+  {u:"Unit 2",t:"Chain migration",d:"The process by which migrants from a specific place follow others from that same place to the same destination, using established social networks; also called migration networks."},
+  {u:"Unit 2",t:"Step migration",d:"Migration that occurs in stages, with migrants moving progressively from rural areas to small towns to cities rather than directly to the final destination."},
+  {u:"Unit 2",t:"Transnationalism",d:"The phenomenon in which immigrants maintain strong cultural, economic, and social ties to both their origin and destination countries simultaneously."},
+  {u:"Unit 2",t:"Guest workers / migrant workers",d:"Laborers who temporarily migrate to a foreign country to work, often in low-wage jobs, usually without the intention or right to permanently settle."},
+  {u:"Unit 2",t:"Remittances",d:"Money sent by migrants back to their families in their home country; a major source of income for many developing nations."},
+  {u:"Unit 2",t:"Net migration",d:"The difference between the number of immigrants entering and emigrants leaving a country; positive = more in-migrants, negative = more out-migrants."},
+  {u:"Unit 2",t:"Gravity model",d:"A model predicting that the degree of interaction (including migration) between two places is proportional to the product of their populations and inversely proportional to the distance between them."},
+  {u:"Unit 2",t:"Intervening obstacles",d:"Physical or political factors that make migration more difficult and may prevent would-be migrants from completing a move (e.g., oceans, border walls, cost of travel)."},
+  {u:"Unit 2",t:"Intervening opportunity",d:"A closer or more attractive opportunity that causes a migrant to stop short of their original intended destination."},
+  {u:"Unit 2",t:"Epidemiologic transition model",d:"A model describing the shift in causes of death as a country develops; populations move from dying primarily of infectious diseases to degenerative/chronic diseases like cancer and heart disease."},
+  {u:"Unit 3",t:"Culture",d:"The shared beliefs, values, practices, languages, religions, and material objects that characterize a group of people and are transmitted across generations."},
+  {u:"Unit 3",t:"Material vs. nonmaterial culture",d:"Material culture refers to physical objects created and used by a culture (e.g., tools, clothing, architecture). Nonmaterial culture refers to intangible aspects like beliefs, values, norms, and language."},
+  {u:"Unit 3",t:"Cultural trait / complex / realm",d:"A cultural trait is a single element of culture (e.g., a language). A cultural complex is a group of related traits (e.g., cowboy culture). A cultural realm is a large region sharing broad cultural characteristics."},
+  {u:"Unit 3",t:"Built environment",d:"The human-made surroundings in which people live, work, and play; includes buildings, roads, parks, and other infrastructure."},
+  {u:"Unit 3",t:"Language family / branch",d:"A language family is a group of languages descended from a common ancestral language (e.g., Indo-European). A branch is a subdivision with a more recent common ancestor (e.g., Germanic, Romance)."},
+  {u:"Unit 3",t:"Dialect",d:"A regional variation of a language distinguished by distinct vocabulary, grammar, and pronunciation; dialects of the same language are mutually intelligible."},
+  {u:"Unit 3",t:"Lingua franca",d:"A language of communication and trade used among people who speak different native languages (e.g., English globally; Swahili in East Africa)."},
+  {u:"Unit 3",t:"Pidgin / Creole",d:"A pidgin is a simplified mixture of two or more languages used for communication between groups. A Creole is a pidgin that has become the native language of a community, with expanded vocabulary and grammar."},
+  {u:"Unit 3",t:"Official language",d:"A language given special legal status in a country, used in government, education, and law (e.g., French is the official language of France)."},
+  {u:"Unit 3",t:"Isogloss",d:"A geographic boundary line that marks the limits of a linguistic feature, such as the use of a specific word or pronunciation (e.g., the boundary between where people say 'soda' vs. 'pop')."},
+  {u:"Unit 3",t:"Language extinction / endangered languages",d:"Language extinction occurs when the last native speaker of a language dies. Endangered languages have a declining number of speakers at risk of extinction."},
+  {u:"Unit 3",t:"Universalizing religions",d:"Religions that actively seek converts and claim to apply to all of humanity. The three main ones are Christianity, Islam, and Buddhism."},
+  {u:"Unit 3",t:"Ethnic religions",d:"Religions closely tied to a specific ethnic group, culture, or place; do not actively seek converts (e.g., Hinduism, Judaism, Sikhism, Shintoism, Animism)."},
+  {u:"Unit 3",t:"Sacred vs. secular space",d:"Sacred space is a place imbued with religious or spiritual meaning (e.g., Mecca, the Ganges River). Secular space is ordinary, everyday space with no religious significance."},
+  {u:"Unit 3",t:"Ethnocentrism",d:"The tendency to evaluate other cultures based on the standards and values of one's own culture, often viewing one's own culture as superior."},
+  {u:"Unit 3",t:"Cultural relativism",d:"The practice of judging a culture by its own standards rather than those of the observer; recognizing that cultural differences do not imply inferiority or superiority."},
+  {u:"Unit 3",t:"Popular vs. folk culture",d:"Popular culture is mass-produced, widely distributed, and homogenizing (e.g., McDonald's, Hollywood). Folk culture is traditional, locally produced, and tied to a specific community's identity and history."},
+  {u:"Unit 3",t:"Acculturation",d:"The process by which a person or group adopts elements of another culture while still retaining aspects of their original culture; partial cultural exchange."},
+  {u:"Unit 3",t:"Assimilation",d:"The process by which a minority group fully adopts the culture of the dominant group, losing its original cultural identity."},
+  {u:"Unit 3",t:"Syncretism",d:"The blending of two or more cultural traditions or religions to create a new, hybrid form (e.g., Caribbean Vodou blending West African religions with Catholicism)."},
+  {u:"Unit 3",t:"Cultural convergence / divergence",d:"Cultural convergence: cultures become more alike due to globalization. Cultural divergence: cultures become more distinct and separate from one another."},
+  {u:"Unit 3",t:"Cultural imperialism",d:"The imposition of one culture's values, practices, and products onto another, often through economic or political power; frequently associated with Western media and global corporations."},
+  {u:"Unit 3",t:"Cultural appropriation",d:"The adoption of elements from a minority or marginalized culture by members of a dominant culture without proper understanding or credit, often in a way that exploits or demeans the source culture."},
+  {u:"Unit 3",t:"Placelessness",d:"The loss of unique character and local identity in places due to the spread of standardized, mass-produced cultural landscapes (e.g., chain restaurants and strip malls making all places look alike); coined by Edward Relph."},
+  {u:"Unit 3",t:"Neolocalism",d:"The deliberate effort to reconnect with and celebrate local culture and place identity, often as a reaction against placelessness and globalization (e.g., local craft breweries, farmers' markets)."},
+  {u:"Unit 3",t:"Reterritorialization",d:"The process by which a cultural group reestablishes its cultural identity and practices in a new location, adapting their culture to the new place while preserving core elements."},
+  {u:"Unit 3",t:"Sequent occupance",d:"The concept that successive cultures and societies leave their imprint on a landscape, and the current landscape reflects layers of all the cultures that have occupied it."},
+  {u:"Unit 3",t:"Ethnicity",d:"A shared cultural identity among a group of people based on common ancestry, language, history, traditions, and/or religion; distinct from race."},
+  {u:"Unit 3",t:"Diaspora",d:"The dispersal of a population from its original homeland, either forced or voluntary, and the maintenance of a cultural identity in the places of resettlement (e.g., the African diaspora, the Jewish diaspora)."},
+  {u:"Unit 3",t:"Gender roles",d:"Socially and culturally constructed expectations about the behaviors, roles, and responsibilities considered appropriate for men and women within a given society."},
+  {u:"Unit 3",t:"Taboo",d:"A cultural or religious prohibition against a particular practice, food, or behavior (e.g., dietary restrictions on pork in Islam and Judaism)."},
+  {u:"Unit 3",t:"Toponym",d:"A place name; toponyms often reflect the history, culture, language, and values of the people who named the place (e.g., 'New York' referencing York, England)."},
+  {u:"Unit 4",t:"State",d:"An independent political unit occupying a defined territory with a permanent population, a government, and recognized sovereignty; synonymous with 'country.'"},
+  {u:"Unit 4",t:"Nation-state",d:"A state whose population shares a common national identity, culture, language, and history, and whose political borders closely align with the geographic extent of that nation (e.g., Japan, Iceland)."},
+  {u:"Unit 4",t:"Stateless nation",d:"A group of people sharing a common cultural identity (a nation) who do not have their own independent state (e.g., the Kurds, Palestinians, Romani)."},
+  {u:"Unit 4",t:"Multinational state",d:"A state that contains more than one nation or significant ethnic/cultural group within its borders (e.g., Canada, Russia, the former Soviet Union)."},
+  {u:"Unit 4",t:"Sovereignty",d:"The supreme authority of a state to govern itself and make decisions within its territory without interference from external powers; a foundational concept in international relations."},
+  {u:"Unit 4",t:"Self-determination",d:"The right of a group of people sharing a common identity to determine their own political status and governance, including the potential to form an independent state."},
+  {u:"Unit 4",t:"Territoriality",d:"The behavior by which individuals or groups assert control over a defined geographic area; at the state level, the attachment of a people to a defined territory."},
+  {u:"Unit 4",t:"Geopolitics",d:"The study of how geographic factors (location, size, resources, terrain) influence political power, international relations, and foreign policy."},
+  {u:"Unit 4",t:"Heartland / Rimland theory",d:"Mackinder's Heartland Theory: whoever controls the Eurasian interior controls the world. Spykman's Rimland Theory counters that control of coastal Eurasia is more strategically important."},
+  {u:"Unit 4",t:"Compact state",d:"A state with a roughly circular or square shape, minimizing the distance from the center to any border; efficient to govern and defend (e.g., Uruguay, Poland)."},
+  {u:"Unit 4",t:"Elongated state",d:"A state with a long, narrow shape; can have communication and governance challenges (e.g., Chile, Norway)."},
+  {u:"Unit 4",t:"Prorupted state",d:"A compact state with a large projecting extension, often used to access resources or a coastline (e.g., Namibia's Caprivi Strip, Thailand)."},
+  {u:"Unit 4",t:"Perforated state",d:"A state that completely surrounds another state (e.g., South Africa surrounds Lesotho; Italy surrounds the Vatican)."},
+  {u:"Unit 4",t:"Fragmented state",d:"A state whose territory is not contiguous; made up of islands or physically separated pieces (e.g., Indonesia, the Philippines)."},
+  {u:"Unit 4",t:"Landlocked state",d:"A state that has no access to the ocean; dependent on neighboring states for access to international trade routes (e.g., Bolivia, Switzerland, Afghanistan)."},
+  {u:"Unit 4",t:"Enclave / exclave",d:"An enclave is a territory surrounded by the territory of another state (e.g., Lesotho within South Africa). An exclave is a portion of a state separated from the main territory by foreign territory (e.g., Alaska)."},
+  {u:"Unit 4",t:"Microstate",d:"An independent state with an extremely small area and/or population (e.g., San Marino, Monaco, Vatican City, Liechtenstein)."},
+  {u:"Unit 4",t:"Buffer state",d:"A smaller, neutral country lying between two larger, rival powers; serves to reduce the risk of direct conflict (e.g., historically, Afghanistan between Russia and Britain)."},
+  {u:"Unit 4",t:"Physical boundary",d:"A boundary that follows a natural feature of the landscape, such as a mountain range, river, or desert (e.g., the Pyrenees between France and Spain)."},
+  {u:"Unit 4",t:"Cultural boundary",d:"A boundary that follows the distribution of cultural traits, such as language, religion, or ethnicity (e.g., the boundary between France and Germany reflects language differences)."},
+  {u:"Unit 4",t:"Geometric boundary",d:"A boundary drawn as a straight line, often along lines of latitude and longitude, without regard to physical or cultural features (e.g., much of the U.S.–Canada border at 49°N)."},
+  {u:"Unit 4",t:"Antecedent boundary",d:"A boundary established before the area was well populated, drawn before significant cultural landscapes developed in the region (e.g., the U.S.–Canada border in the west)."},
+  {u:"Unit 4",t:"Subsequent boundary",d:"A boundary drawn after an area has been settled, taking existing cultural patterns into account (e.g., the border between France and Germany evolved alongside cultural/linguistic divisions)."},
+  {u:"Unit 4",t:"Superimposed boundary",d:"A boundary imposed by an external, often colonial power without consideration for existing cultural, ethnic, or political divisions (e.g., boundaries drawn in Africa during the Berlin Conference)."},
+  {u:"Unit 4",t:"Relic boundary",d:"A boundary that no longer functions as a political border but still leaves visible traces on the cultural or physical landscape (e.g., the former Berlin Wall, Hadrian's Wall in England)."},
+  {u:"Unit 4",t:"Defined / delimited / demarcated",d:"Defined: a boundary is legally described in a treaty. Delimited: a boundary is drawn on a map. Demarcated: a boundary is physically marked on the ground (e.g., with fences, walls, or signs)."},
+  {u:"Unit 4",t:"Boundary disputes",d:"Conflicts between states over the location, demarcation, or interpretation of a border; types include positional, territorial, resource, and functional disputes."},
+  {u:"Unit 4",t:"Gerrymandering",d:"The manipulation of electoral district boundaries to give one political party an unfair advantage over others, or to dilute the voting power of a particular group."},
+  {u:"Unit 4",t:"Devolution",d:"The transfer of power from a central government to regional or local governments; driven by ethnic, cultural, economic, or geographic forces (e.g., Scotland and Wales gaining greater autonomy from the UK)."},
+  {u:"Unit 4",t:"Balkanization",d:"The fragmentation of a region into smaller, often hostile political units based on ethnic or cultural differences; named for the splintering of the Balkans region in the 20th century."},
+  {u:"Unit 4",t:"Ethnonationalism",d:"A form of nationalism in which the state derives its political legitimacy from the ethnic, cultural, or racial identity of its population; can lead to conflict when ethnic groups seek their own states."},
+  {u:"Unit 4",t:"Centripetal vs. centrifugal forces",d:"Centripetal forces unify a state and promote national identity (e.g., shared language, strong economy). Centrifugal forces divide and destabilize a state (e.g., ethnic conflict, regional inequality)."},
+  {u:"Unit 4",t:"Federal vs. unitary state",d:"Federal: power is constitutionally divided between central and regional governments (e.g., United States, Germany). Unitary: the central government holds most power, with regional governments subordinate (e.g., France, Japan)."},
+  {u:"Unit 4",t:"Confederation",d:"A loose union of independent states that retain most of their sovereignty, delegating only limited powers to a central authority (e.g., the Confederate States of America historically)."},
+  {u:"Unit 4",t:"Supranational organization",d:"An alliance or union of three or more states that cede some sovereignty to a higher body for collective benefit (e.g., the United Nations, the European Union, NATO)."},
+  {u:"Unit 4",t:"EEZ (Exclusive Economic Zone)",d:"A zone extending 200 nautical miles from a state's coastline, within which the state has exclusive rights to explore and exploit natural resources (established under UNCLOS)."},
+  {u:"Unit 4",t:"Colonialism",d:"The policy of acquiring and maintaining control over foreign territories, exploiting their resources and labor for the benefit of the colonizing power; associated with European expansion from the 15th–20th centuries."},
+  {u:"Unit 4",t:"Imperialism",d:"The broader practice of extending a country's power and influence over other territories through economic, military, or political means; colonialism is one form of imperialism."},
+  {u:"Unit 4",t:"Shatterbelt",d:"A region of persistent political fragmentation and instability, located between major powers and characterized by competing external influences and internal conflict (e.g., the Middle East, Eastern Europe during the Cold War)."},
+  {u:"Unit 4",t:"Choke point",d:"A narrow, strategic geographic location through which a large amount of traffic must pass; control gives significant military or economic leverage (e.g., the Strait of Hormuz, the Suez Canal)."},
+  {u:"Unit 5",t:"Intensive subsistence agriculture",d:"A form of subsistence farming in which farmers maximize yields from small plots using large amounts of labor, often growing rice in flooded paddies; common in densely populated parts of South and Southeast Asia."},
+  {u:"Unit 5",t:"Shifting cultivation / slash-and-burn",d:"Farmers clear land by cutting and burning vegetation, farm it for a few years until soil fertility declines, then move on and repeat the cycle; common in tropical rainforest regions."},
+  {u:"Unit 5",t:"Pastoral nomadism",d:"Herders move their livestock seasonally across large areas in search of fresh pasture and water; found in arid and semi-arid regions of Africa, the Middle East, and Central Asia."},
+  {u:"Unit 5",t:"Mixed crop and livestock farming",d:"Commercial agriculture in which farmers grow crops and raise livestock together, often using crops as animal feed; dominant in the Midwestern United States and Europe."},
+  {u:"Unit 5",t:"Grain farming",d:"Large-scale commercial farming focused on growing staple grain crops (wheat, corn, rice) for sale; common in the Great Plains of North America."},
+  {u:"Unit 5",t:"Dairy farming / dairying",d:"Commercial farming focused on producing milk and milk products; requires proximity to markets due to perishability; common in the northeastern United States and northern Europe."},
+  {u:"Unit 5",t:"Ranching / livestock ranching",d:"Large-scale commercial grazing of cattle or other livestock for beef production; requires extensive land and is common in arid and semi-arid regions."},
+  {u:"Unit 5",t:"Mediterranean agriculture",d:"Specialized commercial farming in regions with a Mediterranean climate (wet winters, dry summers); produces wine grapes, olives, citrus fruits, and nuts (e.g., California, Spain, Italy, Chile)."},
+  {u:"Unit 5",t:"Truck farming / market gardening",d:"Intensive commercial farming of fruits, vegetables, and flowers for sale at market; requires proximity to urban markets or good transportation infrastructure."},
+  {u:"Unit 5",t:"Plantation agriculture",d:"Large-scale commercial farming of a single cash crop (e.g., sugarcane, cotton, coffee) using large amounts of labor; historically associated with colonialism in tropical regions."},
+  {u:"Unit 5",t:"Agricultural revolutions",d:"First (Neolithic): transition from hunter-gatherer to settled farming (~10,000 BCE). Second (18th–19th c.): mechanization, crop rotation in Europe/North America. Third (Green Revolution): high-yield crops, fertilizers, irrigation in developing countries."},
+  {u:"Unit 5",t:"Intensive vs. extensive agriculture",d:"Intensive: uses large amounts of labor, capital, or technology on small plots to maximize output per area. Extensive: uses large amounts of land with low inputs per unit area (e.g., ranching, grain farming)."},
+  {u:"Unit 5",t:"Subsistence vs. commercial farming",d:"Subsistence farming produces food primarily for the farmer's own consumption. Commercial farming produces food primarily for sale in markets."},
+  {u:"Unit 5",t:"Von Thünen model",d:"A model predicting land use patterns around a central market city based on transportation costs and land rent; perishable or land-intensive products are grown closer to the city."},
+  {u:"Unit 5",t:"Green Revolution",d:"The mid-20th-century transfer of agricultural technology (high-yield crop varieties, synthetic fertilizers, irrigation, pesticides) to developing countries, dramatically increasing food production."},
+  {u:"Unit 5",t:"GMOs",d:"Organisms whose genetic material has been altered using biotechnology to produce desired traits such as pest resistance, drought tolerance, or higher yield."},
+  {u:"Unit 5",t:"Monoculture",d:"The practice of growing a single crop species over a large area and across multiple growing seasons; increases efficiency but makes crops vulnerable to disease and reduces biodiversity."},
+  {u:"Unit 5",t:"Polyculture",d:"The practice of growing multiple crops in the same space, mimicking natural ecological diversity; more sustainable but generally less efficient than monoculture."},
+  {u:"Unit 5",t:"Agribusiness",d:"The integration of agriculture into broader business enterprises, including production, processing, distribution, and sale of agricultural products; characterized by large corporations dominating food systems."},
+  {u:"Unit 5",t:"Vertical integration",d:"A business strategy in which a company controls multiple stages of the production process, from raw material to final product; in agriculture, this means owning farms, processing plants, and retail outlets."},
+  {u:"Unit 5",t:"Commodity chains",d:"The series of links connecting the production, processing, distribution, and consumption of a product across geographic space."},
+  {u:"Unit 5",t:"Fair trade",d:"A movement ensuring farmers and producers in developing countries receive a minimum price for their goods and better working conditions, aiming to reduce exploitation in global trade."},
+  {u:"Unit 5",t:"Organic farming",d:"Farming that avoids synthetic pesticides, fertilizers, and GMOs, relying instead on natural processes to maintain soil health and crop yields; often associated with sustainable agriculture."},
+  {u:"Unit 5",t:"Food security / insecurity",d:"Food security: all people have reliable access to sufficient, safe, and nutritious food. Food insecurity: the lack of reliable access to affordable, adequate food."},
+  {u:"Unit 5",t:"Food deserts",d:"Areas, often in low-income urban or rural communities, where residents lack access to affordable, nutritious food due to the absence of nearby grocery stores."},
+  {u:"Unit 5",t:"Food miles",d:"The distance food travels from where it is produced to where it is consumed; a measure used in discussions of sustainability and the environmental impact of food transportation."},
+  {u:"Unit 5",t:"Aquaculture",d:"The farming of fish, shellfish, algae, and other aquatic organisms in controlled environments; the aquatic equivalent of agriculture."},
+  {u:"Unit 5",t:"Aquaponics",d:"A sustainable food production system combining aquaculture with hydroponics; fish waste fertilizes plants, and plants filter the water for the fish."},
+  {u:"Unit 5",t:"Hydroponics",d:"A method of growing plants without soil, using nutrient-rich water solutions; allows food production in non-agricultural environments."},
+  {u:"Unit 5",t:"Irrigation",d:"The artificial application of water to crops to supplement natural rainfall; makes agriculture possible in arid regions but can lead to soil salinization and water depletion."},
+  {u:"Unit 5",t:"Crop rotation",d:"The practice of alternating the types of crops grown in a field across seasons to maintain soil fertility, reduce pests, and prevent disease."},
+  {u:"Unit 5",t:"Double cropping",d:"The practice of growing two crops per year on the same field, possible in tropical or subtropical climates; increases agricultural productivity."},
+  {u:"Unit 5",t:"Fallow",d:"Land left unplanted for a season or more to allow it to rest and recover its fertility; an important traditional soil conservation technique."},
+  {u:"Unit 5",t:"Terracing",d:"The carving of flat ledges into steep hillsides to create farmable land and reduce soil erosion; common in hilly regions of South and Southeast Asia (e.g., rice terraces of the Philippines)."},
+  {u:"Unit 5",t:"Desertification",d:"The process by which fertile or semi-arid land becomes desert, typically due to drought, deforestation, overgrazing, or poor farming practices; a major issue in the Sahel region of Africa."},
+  {u:"Unit 5",t:"Deforestation",d:"The clearing of forests for agricultural, commercial, or urban purposes; leads to habitat loss, soil erosion, disruption of the water cycle, and increased atmospheric CO₂."},
+  {u:"Unit 5",t:"Sustainable agriculture",d:"Farming practices that meet current food needs without compromising the ability of future generations to meet their own needs; emphasizes environmental health, economic profitability, and social equity."},
+  {u:"Unit 5",t:"Cash crops / luxury crops",d:"Cash crops are grown primarily for sale rather than subsistence (e.g., cotton, tobacco, sugarcane). Luxury crops are non-essential crops grown for pleasurable consumption (e.g., coffee, tea, cocoa)."},
+  {u:"Unit 5",t:"Land survey systems",d:"Metes and bounds: uses physical features and distances to describe irregular land parcels (eastern US). Township and range: grid system of square townships (western US). Long lot: narrow strips fronting a river or road (French colonial areas, e.g., Louisiana)."},
+  {u:"Unit 6",t:"Urbanization",d:"The process by which an increasing proportion of a population lives in cities; driven by rural-to-urban migration and natural population increase in cities."},
+  {u:"Unit 6",t:"Suburbanization",d:"The growth of suburbs and the movement of people and businesses from urban cores to the surrounding periphery, often facilitated by automobile use and highway construction."},
+  {u:"Unit 6",t:"Counter-urbanization",d:"The movement of people and businesses from large cities to smaller towns and rural areas, often enabled by improved transportation and remote work."},
+  {u:"Unit 6",t:"Central Business District (CBD)",d:"The commercial and business center of a city, characterized by high land values, high-rise buildings, retail and office space, and significant daily commuter traffic."},
+  {u:"Unit 6",t:"Suburb",d:"A residential community located on the outskirts of a city, typically lower density than the urban core, with residents who often commute to the city for work."},
+  {u:"Unit 6",t:"Exurbs",d:"Communities even further from the city than suburbs, typically rural or semi-rural, inhabited by affluent commuters who can afford the longer commute; lower density than suburbs."},
+  {u:"Unit 6",t:"Edge city",d:"A large node of office, retail, and commercial space that has developed outside the traditional urban core, often at the intersection of major highways (e.g., Tysons Corner, Virginia)."},
+  {u:"Unit 6",t:"Megalopolis",d:"A chain of overlapping metropolitan areas forming one continuous urbanized region; coined by Jean Gottmann and first applied to the Boston–Washington, D.C. corridor (BosWash)."},
+  {u:"Unit 6",t:"Megacity",d:"A metropolitan area with a total population exceeding 10 million people (e.g., Tokyo, Mumbai, São Paulo)."},
+  {u:"Unit 6",t:"Metropolitan area",d:"A large city and its surrounding suburbs and communities; a functional urban region defined by economic integration with a central city."},
+  {u:"Unit 6",t:"Primate city",d:"The largest city in a country that disproportionately dominates in terms of population, economy, culture, and politics; typically more than twice the size of the next-largest city (e.g., Paris, Bangkok)."},
+  {u:"Unit 6",t:"Rank-size rule",d:"An observed pattern in which the population of a city is inversely proportional to its rank in the national urban hierarchy; the second-largest city is half the size of the largest, and so on."},
+  {u:"Unit 6",t:"Hinterland",d:"The region surrounding a city that is economically and socially linked to it; the market area from which a central place draws customers and to which it provides goods and services."},
+  {u:"Unit 6",t:"Central place theory",d:"Developed by Walter Christaller; explains the size, spacing, and distribution of cities by proposing that settlements exist to provide goods and services to surrounding hinterlands; higher-order goods serve larger areas."},
+  {u:"Unit 6",t:"Bid-rent theory",d:"A geographic economic theory explaining how the price of land decreases with increasing distance from the CBD; different land uses (commercial, residential, agricultural) can afford different rents at different distances."},
+  {u:"Unit 6",t:"Concentric zone model (Burgess)",d:"Describes cities as a series of rings radiating outward from the CBD: CBD → zone of transition → working-class housing → middle-class housing → commuter zone."},
+  {u:"Unit 6",t:"Sector model (Hoyt)",d:"Describes cities as developing in wedge-shaped sectors extending outward from the CBD along transportation corridors; high-income sectors develop along desirable routes."},
+  {u:"Unit 6",t:"Multiple nuclei model (Harris & Ullman)",d:"Argues that cities do not develop around a single CBD but around multiple nodes of activity (e.g., airports, universities, industrial zones), each attracting related land uses."},
+  {u:"Unit 6",t:"Peripheral model",d:"Describes the post-WWII American metropolitan area as a large urban core surrounded by suburban rings served by beltways and connecting highways, with edge cities at major interchanges."},
+  {u:"Unit 6",t:"Latin American / Griffin-Ford model",d:"A model of the Latin American city with a strong CBD, a commercial spine into a zone of better housing for elites, surrounded by concentric rings of decreasing quality outward to squatter settlements on the periphery."},
+  {u:"Unit 6",t:"World city / global city",d:"A city that serves as a major node in the global economic system, hosting headquarters of multinational corporations, major financial markets, and international organizations (e.g., New York, London, Tokyo)."},
+  {u:"Unit 6",t:"Invasion and succession",d:"The process by which a new group or land use enters a neighborhood (invasion) and gradually displaces the existing group or use (succession); a driver of neighborhood change."},
+  {u:"Unit 6",t:"Ethnic enclave",d:"A neighborhood or district within a city where a particular ethnic group is concentrated, maintaining its cultural identity, institutions, and businesses (e.g., Chinatown, Little Italy)."},
+  {u:"Unit 6",t:"Gentrification",d:"The process by which higher-income residents and businesses move into a lower-income urban neighborhood, renovating buildings and raising property values, often displacing long-time residents."},
+  {u:"Unit 6",t:"Redlining",d:"The discriminatory practice of denying services or loans to residents of neighborhoods deemed 'hazardous,' typically minority communities; formally banned in the U.S. in 1968 but with lasting effects."},
+  {u:"Unit 6",t:"Blockbusting",d:"A real estate practice (now illegal) in which agents convinced white homeowners to sell cheaply by stoking fears about minority families moving in, then reselling to Black families at inflated prices."},
+  {u:"Unit 6",t:"White flight",d:"The large-scale migration of white residents from racially mixed or increasingly minority urban neighborhoods to suburbs, particularly in mid-20th century United States."},
+  {u:"Unit 6",t:"Urban renewal",d:"Government-sponsored programs that demolished deteriorating urban neighborhoods and replaced them with new buildings, often displacing low-income and minority residents; associated with 1950s–1970s U.S. urban policy."},
+  {u:"Unit 6",t:"Brownfield vs. greenfield development",d:"Brownfields: previously developed, often contaminated sites (e.g., former industrial land) that can be redeveloped. Greenfields: undeveloped, often agricultural or natural land on the urban fringe used for new development."},
+  {u:"Unit 6",t:"Mixed-use development",d:"Urban planning that combines residential, commercial, and sometimes industrial uses in close proximity within the same building or neighborhood; promotes walkability and reduces car dependence."},
+  {u:"Unit 6",t:"Zoning",d:"The legal division of a city into districts in which specific land uses are permitted or prohibited; separates residential, commercial, industrial, and agricultural uses to reduce conflicts."},
+  {u:"Unit 6",t:"Urban sprawl",d:"The uncontrolled, low-density expansion of urban areas into surrounding rural or undeveloped land, typically car-dependent and associated with environmental and social costs."},
+  {u:"Unit 6",t:"Urban heat island",d:"A metropolitan area that is significantly warmer than its surrounding rural areas due to human activities, dark surfaces (asphalt, rooftops) absorbing heat, and reduced vegetation."},
+  {u:"Unit 6",t:"Squatter settlements / informal settlements / slums",d:"Areas of illegally or informally occupied urban land where residents build their own housing, usually lacking basic services; found on urban peripheries in rapidly urbanizing developing countries (e.g., favelas in Brazil)."},
+  {u:"Unit 6",t:"Smart growth",d:"Urban planning strategies that encourage compact, transit-oriented, walkable, and environmentally sustainable development to counter urban sprawl."},
+  {u:"Unit 6",t:"New urbanism",d:"An urban design movement promoting walkable, mixed-use, human-scaled neighborhoods that foster community interaction and reduce car dependence; often revives traditional neighborhood design."},
+  {u:"Unit 6",t:"Public housing",d:"Government-owned and -subsidized residential buildings or complexes built to provide affordable housing for low-income residents."},
+  {u:"Unit 6",t:"Commuter rail",d:"A passenger rail service that transports workers between suburban areas and city centers during peak travel hours; reduces automobile traffic and congestion."},
+  {u:"Unit 6",t:"Deindustrialization",d:"The decline of manufacturing and heavy industry in a region, often resulting in job losses, population decline, and economic hardship (e.g., the U.S. Rust Belt)."},
+  {u:"Unit 7",t:"Gross Domestic Product (GDP)",d:"The total monetary value of all goods and services produced within a country's borders in a given year; a basic measure of economic output."},
+  {u:"Unit 7",t:"GDP per capita",d:"GDP divided by the total population; used to compare the average economic output per person across countries, giving a sense of average living standards."},
+  {u:"Unit 7",t:"GNI (Gross National Income)",d:"The total income earned by a country's residents, regardless of where they earned it; includes income from overseas investments and remittances; slightly different from GDP."},
+  {u:"Unit 7",t:"PPP (Purchasing Power Parity)",d:"An adjustment to economic data that accounts for differences in the cost of living between countries, allowing more meaningful comparisons of actual purchasing power."},
+  {u:"Unit 7",t:"Human Development Index (HDI)",d:"A UN composite index measuring human development using three dimensions: life expectancy, education (mean and expected years of schooling), and GNI per capita."},
+  {u:"Unit 7",t:"Gender Inequality Index (GII)",d:"A UN composite measure of gender inequality using three dimensions: reproductive health (maternal mortality and adolescent fertility), empowerment (parliamentary seats and education), and labor force participation."},
+  {u:"Unit 7",t:"Primary sector",d:"Economic activities involving the direct extraction of natural resources; includes farming, fishing, forestry, and mining."},
+  {u:"Unit 7",t:"Secondary sector",d:"Economic activities involving the processing and transformation of raw materials into finished goods; includes manufacturing and construction."},
+  {u:"Unit 7",t:"Tertiary sector",d:"Economic activities involving the provision of services rather than goods; includes retail, transportation, finance, healthcare, and education."},
+  {u:"Unit 7",t:"Quaternary sector",d:"Economic activities involving information processing, research, and knowledge creation; includes IT, consulting, research-level education, and media."},
+  {u:"Unit 7",t:"Quinary sector",d:"The highest-level decision-making in an economy; includes executives, government officials, and top-level managers; sometimes treated as a subset of the quaternary sector."},
+  {u:"Unit 7",t:"Core / periphery / semi-periphery",d:"Core: wealthy, industrialized nations dominating global trade. Periphery: less developed, exporting raw materials to the core. Semi-periphery: in between, industrializing but still exploited by the core (e.g., Brazil, China, Mexico)."},
+  {u:"Unit 7",t:"World-systems theory",d:"Developed by Immanuel Wallerstein; argues that the global economy is structured as an integrated capitalist system with core, semi-periphery, and periphery nations, where wealth flows from periphery to core."},
+  {u:"Unit 7",t:"Dependency theory",d:"A theory arguing that the poverty of developing nations is not due to internal failings but to their historical and ongoing exploitation by wealthy nations through colonial and trade relationships."},
+  {u:"Unit 7",t:"Rostow's stages of economic growth",d:"Five linear stages all countries must pass through: (1) traditional society, (2) preconditions for takeoff, (3) takeoff, (4) drive to maturity, (5) high mass consumption."},
+  {u:"Unit 7",t:"Neoliberalism",d:"An economic ideology promoting free markets, deregulation, privatization, and reduced government intervention; became dominant in global development policy in the 1980s (associated with Reagan and Thatcher)."},
+  {u:"Unit 7",t:"Structural adjustment programs (SAPs)",d:"Conditions imposed by the World Bank and IMF on developing countries receiving loans, typically requiring deregulation, privatization, cuts to social spending, and trade liberalization; often criticized for increasing poverty."},
+  {u:"Unit 7",t:"TNCs / MNCs",d:"Companies that operate in multiple countries, maintaining production, distribution, and sales networks across national borders; major drivers of globalization and FDI."},
+  {u:"Unit 7",t:"Foreign Direct Investment (FDI)",d:"Investment made by a company or government in one country into business interests in another country, often in the form of establishing business operations or acquiring business assets."},
+  {u:"Unit 7",t:"Industrialization",d:"The transformation of an economy from primarily agricultural to one based on manufacturing and industry; associated with urbanization, technological change, and rising living standards."},
+  {u:"Unit 7",t:"Import substitution",d:"An economic development strategy in which a country produces goods domestically that it previously imported, aiming to reduce dependence on foreign goods and stimulate local industry."},
+  {u:"Unit 7",t:"Export-oriented industrialization",d:"A development strategy in which a country focuses its manufacturing sector on producing goods for export to wealthy countries, often relying on low labor costs to attract foreign investment (e.g., South Korea, Taiwan, China)."},
+  {u:"Unit 7",t:"Outsourcing / offshoring",d:"Outsourcing: contracting business functions to third-party companies. Offshoring: relocating business processes to another country, often to take advantage of lower labor costs."},
+  {u:"Unit 7",t:"SEZ / EPZ",d:"Designated areas within a country where business and trade laws differ; offer tax breaks, looser regulations, and better infrastructure to attract foreign investment (e.g., Chinese Special Economic Zones)."},
+  {u:"Unit 7",t:"Agglomeration",d:"The clustering of businesses and industries in a specific area to take advantage of shared resources, labor pools, infrastructure, and knowledge spillovers; reduces costs through economies of proximity."},
+  {u:"Unit 7",t:"Growth pole",d:"A highly developed urban area or industry that stimulates economic growth in surrounding regions through its demand for labor and resources; a strategy for regional development."},
+  {u:"Unit 7",t:"Technopole",d:"A planned community or region intentionally developed to attract high-technology industries, research institutions, and skilled workers (e.g., Silicon Valley, Bangalore)."},
+  {u:"Unit 7",t:"Rust belt / sun belt",d:"Rust Belt: formerly industrialized region of the northeastern/Midwestern U.S. that experienced deindustrialization and population decline. Sun Belt: warm-climate states of the South and West that saw significant growth in the late 20th century."},
+  {u:"Unit 7",t:"Multiplier effect",d:"The process by which a new or expanding industry generates additional employment and income indirectly, as workers spend their wages locally and supporting industries grow."},
+  {u:"Unit 7",t:"Comparative advantage",d:"The principle that a country should specialize in producing goods it can make relatively more efficiently than other goods, even if another country can produce them in absolute terms more cheaply; basis for free trade theory."},
+  {u:"Unit 7",t:"Absolute advantage",d:"A country has an absolute advantage in producing a good if it can produce more of it per unit of input than another country; distinct from comparative advantage."},
+  {u:"Unit 7",t:"Free trade / protectionism",d:"Free trade: the absence of barriers to international exchange of goods and services. Protectionism: the use of government policies (tariffs, quotas, subsidies) to shield domestic industries from foreign competition."},
+  {u:"Unit 7",t:"Quotas / tariffs / subsidies",d:"Quotas: limits on the quantity of imported goods. Tariffs: taxes on imported goods, making them more expensive. Subsidies: government payments to domestic producers to lower their costs and keep them competitive."},
+  {u:"Unit 7",t:"Just-in-time delivery",d:"A production and inventory strategy in which goods are delivered exactly when needed, minimizing storage costs and increasing efficiency; requires precise logistics."},
+  {u:"Unit 7",t:"Informal economy",d:"Economic activity that takes place outside formal government regulation, taxation, and monitoring; includes street vending, informal labor, and unregistered businesses; common in developing countries."},
+  {u:"Unit 7",t:"Microfinance / microlending",d:"The provision of small loans and other financial services to low-income individuals or groups lacking access to traditional banking; aims to reduce poverty and promote entrepreneurship in developing regions."},
+  {u:"Unit 7",t:"Sustainable development",d:"Development that meets the needs of the present without compromising the ability of future generations to meet their own needs; integrates economic growth, environmental protection, and social equity (Brundtland Commission, 1987)."},
+  {u:"Unit 7",t:"Circular economy",d:"An economic model aiming to eliminate waste by keeping resources in use as long as possible through reuse, repair, remanufacturing, and recycling; contrasts with the traditional linear 'take-make-dispose' economy."},
+  {u:"Unit 7",t:"Gig economy",d:"A labor market characterized by short-term contracts and freelance work rather than permanent jobs; workers earn income from individual projects or tasks (e.g., Uber drivers, Airbnb hosts, freelancers)."},
+  {u:"Unit 7",t:"Economic development",d:"The process by which a country improves the economic, political, and social well-being of its people; typically measured by GDP, HDI, and other indicators of quality of life and productivity."}
+];
+
+const UNITS = ["All units","Unit 1","Unit 2","Unit 3","Unit 4","Unit 5","Unit 6","Unit 7"];
+let deck = [...ALL];
+let idx = 0;
+let flipped = false;
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+let activeUnit = "All units";
+
+function buildTabs() {
+  const tabs = document.getElementById('unitTabs');
+  tabs.innerHTML = '';
+  UNITS.forEach(u => {
+    const b = document.createElement('button');
+    b.className = 'unit-tab' + (u === activeUnit ? ' active' : '');
+    b.textContent = u;
+    b.onclick = () => {
+      activeUnit = u;
+      deck = u === "All units" ? [...ALL] : ALL.filter(c => c.u === u);
+      idx = 0; flipped = false;
+      document.getElementById('cardInner').classList.remove('flipped');
+      render();
+      buildTabs();
+    };
+    tabs.appendChild(b);
+  });
+}
+
+function render() {
+  if (!deck.length) return;
+  const card = deck[idx];
+  document.getElementById('termText').textContent = card.t;
+  document.getElementById('termUnit').textContent = card.u;
+  document.getElementById('defText').textContent = card.d;
+  const pct = Math.round(((idx + 1) / deck.length) * 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = (idx + 1) + ' / ' + deck.length;
+  document.getElementById('hintText').textContent = flipped ? 'Click card to flip back' : 'Click card to flip';
+  document.getElementById('flipAllBtn').textContent = flipped ? 'Hide answer' : 'Show answer';
+}
+
+document.getElementById('cardArea').onclick = () => {
+  flipped = !flipped;
+  document.getElementById('cardInner').classList.toggle('flipped', flipped);
+  document.getElementById('hintText').textContent = flipped ? 'Click card to flip back' : 'Click card to flip';
+  document.getElementById('flipAllBtn').textContent = flipped ? 'Hide answer' : 'Show answer';
+};
+
+document.getElementById('nextBtn').onclick = () => {
+  idx = (idx + 1) % deck.length;
+  flipped = false;
+  document.getElementById('cardInner').classList.remove('flipped');
+  render();
+};
+
+document.getElementById('prevBtn').onclick = () => {
+  idx = (idx - 1 + deck.length) % deck.length;
+  flipped = false;
+  document.getElementById('cardInner').classList.remove('flipped');
+  render();
+};
+
+document.getElementById('shuffleBtn').onclick = () => {
+  shuffle(deck); idx = 0; flipped = false;
+  document.getElementById('cardInner').classList.remove('flipped');
+  render();
+};
+
+document.getElementById('resetBtn').onclick = () => {
+  deck = activeUnit === "All units" ? [...ALL] : ALL.filter(c => c.u === activeUnit);
+  idx = 0; flipped = false;
+  document.getElementById('cardInner').classList.remove('flipped');
+  render();
+};
+
+document.getElementById('flipAllBtn').onclick = (e) => {
+  e.stopPropagation();
+  flipped = !flipped;
+  document.getElementById('cardInner').classList.toggle('flipped', flipped);
+  document.getElementById('hintText').textContent = flipped ? 'Click card to flip back' : 'Click card to flip';
+  document.getElementById('flipAllBtn').textContent = flipped ? 'Hide answer' : 'Show answer';
+};
+
+buildTabs();
+render();
+</script>
