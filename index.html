@@ -3,69 +3,219 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
+<title>AP Human Geography Flashcards</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap');
+
+  :root {
+    --green:      #22c55e;
+    --green-bg:   #dcfce7;
+    --green-text: #15803d;
+    --red:        #ef4444;
+    --red-bg:     #fee2e2;
+    --red-text:   #b91c1c;
+    --gray:       #e5e7eb;
+    --gray-dark:  #6b7280;
+    --front-bg:   #ffffff;
+    --back-bg:    #fffbeb;
+    --back-border:#fde68a;
+    --back-label: #d97706;
+    --border:     #e5e7eb;
+    --text:       #111827;
+    --subtext:    #9ca3af;
+    --blue:       #3b82f6;
+    --amber-bg:   #fef3c7;
+    --amber-border:#fcd34d;
+    --amber-text: #92400e;
+    --shadow:     0 4px 24px rgba(0,0,0,0.07);
+    --radius:     18px;
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   body {
-    font-family: system-ui, -apple-system, sans-serif;
-    background: #f5f5f5;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: #f3f4f6;
+    min-height: 100vh;
     padding: env(safe-area-inset-top) env(safe-area-inset-right)
              env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 
   .app {
-    max-width: 520px;
+    max-width: 540px;
     margin: 0 auto;
-    padding: 12px;
+    padding: 18px 14px 40px;
   }
 
-  .unit-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 10px;
+  /* HEADER */
+  .header { margin-bottom: 16px; }
+  .header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 23px;
+    color: var(--text);
+    letter-spacing: -0.3px;
   }
+  .header p { font-size: 12px; color: var(--subtext); margin-top: 2px; }
+
+  /* UNIT TABS */
+  .unit-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 
   .unit-tab {
+    position: relative;
+    font-family: 'DM Sans', sans-serif;
     font-size: 12px;
-    padding: 6px 10px;
+    font-weight: 500;
+    padding: 6px 12px;
     border-radius: 999px;
-    border: 1px solid #ccc;
+    border: 1.5px solid var(--border);
     background: white;
+    color: var(--gray-dark);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    white-space: nowrap;
   }
+  .unit-tab:hover { border-color: #d1d5db; color: var(--text); }
+  .unit-tab.active { background: var(--text); color: white; border-color: var(--text); }
 
-  .unit-tab.active {
-    background: black;
+  .done-dot {
+    display: none;
+    position: absolute;
+    top: -4px; right: -4px;
+    width: 14px; height: 14px;
+    background: var(--green);
+    border-radius: 50%;
+    border: 2px solid #f3f4f6;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    font-weight: 700;
     color: white;
-    border-color: black;
+    line-height: 1;
   }
+  .unit-tab.complete .done-dot { display: flex; }
 
-  .top-row {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 10px;
-  }
+  /* TOP BUTTONS */
+  .top-row { display: flex; gap: 7px; margin-bottom: 12px; }
 
-  button {
+  .btn {
     flex: 1;
-    padding: 10px;
-    border-radius: 10px;
-    border: 1px solid #ccc;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    padding: 9px 6px;
+    border-radius: 11px;
+    border: 1.5px solid var(--border);
     background: white;
-    font-size: 14px;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn:hover { background: #f3f4f6; }
+  .btn:active { transform: scale(0.97); }
+
+  /* REVIEW BANNER */
+  .review-banner {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-radius: 11px;
+    padding: 9px 13px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .review-banner.show { display: flex; }
+  .review-banner.idle  { background: var(--amber-bg); border: 1.5px solid var(--amber-border); color: var(--amber-text); }
+  .review-banner.active { background: #eff6ff; border: 1.5px solid #93c5fd; color: #1e40af; }
+
+  .review-banner .rbtn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    border-radius: 7px;
+    padding: 5px 11px;
+    color: white;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .review-banner.idle  .rbtn { background: #f59e0b; }
+  .review-banner.active .rbtn { background: var(--blue); }
+
+  /* CARD VIEWPORT */
+  .card-viewport {
+    overflow: hidden;
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    height: 52vw;
+    max-height: 295px;
+    min-height: 195px;
+    position: relative;
   }
 
-  .card-area { perspective: 1000px; margin: 12px 0; }
+  .card-slider {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    will-change: transform;
+  }
+  .card-slider.animating {
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 
+  .card-area {
+    flex-shrink: 0;
+    width: 100%;
+    height: 100%;
+    perspective: 1000px;
+    cursor: pointer;
+    position: relative;
+  }
+
+  /* ghost card for slide animation */
+  .card-ghost {
+    flex-shrink: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    background: white;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 22px 20px;
+    text-align: center;
+    position: absolute;
+    top: 0;
+    pointer-events: none;
+  }
+  .card-ghost .ghost-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--subtext);
+    margin-bottom: 12px;
+  }
+  .card-ghost .ghost-term {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(16px, 4vw, 23px);
+    color: var(--text);
+    line-height: 1.25;
+  }
+
+  /* flip card */
   .card-inner {
     position: relative;
     width: 100%;
-    height: 55vh;
+    height: 100%;
     transform-style: preserve-3d;
-    transition: transform 0.4s ease;
+    transition: transform 0.38s ease;
   }
-
   .card-inner.flipped { transform: rotateY(180deg); }
 
   .card-face {
@@ -73,95 +223,202 @@
     width: 100%;
     height: 100%;
     backface-visibility: hidden;
-    border-radius: 16px;
-    background: white;
-    border: 1px solid #ddd;
+    -webkit-backface-visibility: hidden;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 20px;
+    padding: 22px 20px;
     text-align: center;
+    box-shadow: var(--shadow);
+    overflow: hidden;
   }
 
-  .card-back { transform: rotateY(180deg); }
+  .card-front { background: var(--front-bg); }
+  .card-back  { background: var(--back-bg); border-color: var(--back-border); transform: rotateY(180deg); }
 
-  .card-label { font-size: 12px; opacity: 0.6; margin-bottom: 10px; }
+  .card-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--subtext);
+    margin-bottom: 12px;
+    flex-shrink: 0;
+  }
+  .card-back .card-label { color: var(--back-label); }
 
   .card-term {
-    font-size: clamp(18px, 4vw, 26px);
-    font-weight: 600;
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(17px, 4vw, 24px);
+    color: var(--text);
+    line-height: 1.25;
   }
 
   .card-def {
-    font-size: clamp(14px, 3.5vw, 18px);
-    line-height: 1.5;
-    max-width: 90%;
+    font-size: clamp(12px, 3vw, 15px);
+    line-height: 1.6;
+    color: var(--text);
+    overflow-y: auto;
+    max-height: calc(100% - 40px);
   }
 
-  .hint {
+  .flip-hint {
+    position: absolute;
+    bottom: 11px;
+    font-size: 10px;
+    color: var(--subtext);
+    pointer-events: none;
+  }
+
+  /* COMPLETION PANEL */
+  .completion {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
-    font-size: 12px;
-    opacity: 0.6;
-    margin-top: 6px;
+    padding: 32px 20px;
+    background: white;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    box-shadow: var(--shadow);
+    margin-bottom: 10px;
+    min-height: 195px;
   }
+  .completion.show { display: flex; }
+  .completion .c-emoji { font-size: 46px; margin-bottom: 12px; }
+  .completion h2 { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 6px; color: var(--text); }
+  .completion p  { font-size: 13px; color: var(--gray-dark); line-height: 1.5; }
 
-  .progress {
-    margin-top: 10px;
-    font-size: 12px;
-    text-align: center;
-    opacity: 0.7;
-  }
+  /* PROGRESS BAR */
+  .progress-wrap { margin-bottom: 10px; }
+  .progress-bar  { height: 6px; background: var(--gray); border-radius: 999px; overflow: hidden; display: flex; }
+  .bar-got  { background: var(--green); height: 100%; transition: width 0.3s ease; }
+  .bar-miss { background: var(--red);   height: 100%; transition: width 0.3s ease; }
 
-  .nav-row {
-    display: flex;
-    gap: 6px;
-    margin-top: 10px;
+  .progress-meta { display: flex; justify-content: space-between; margin-top: 5px; font-size: 11px; color: var(--subtext); }
+  .progress-meta .pill { display: flex; align-items: center; gap: 4px; }
+  .dot   { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot-g { background: var(--green); }
+  .dot-r { background: var(--red); }
+  .progress-pos { font-weight: 600; color: #374151; font-size: 11px; }
+
+  /* NAV ROW */
+  .nav-row { display: flex; gap: 7px; margin-bottom: 10px; }
+
+  /* GRADE BUTTONS */
+  .grade-wrap { overflow: hidden; max-height: 0; opacity: 0; transition: max-height 0.28s ease, opacity 0.22s ease; }
+  .grade-wrap.show { max-height: 60px; opacity: 1; }
+  .grade-row { display: flex; gap: 7px; }
+
+  .btn-got, .btn-miss {
+    flex: 1;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.1s;
   }
+  .btn-got  { background: var(--green-bg); color: var(--green-text); }
+  .btn-miss { background: var(--red-bg);   color: var(--red-text); }
+  .btn-got:hover, .btn-miss:hover { filter: brightness(0.95); }
+  .btn-got:active, .btn-miss:active { transform: scale(0.97); }
+
+  /* HINT */
+  .swipe-hint { text-align: center; font-size: 11px; color: var(--subtext); margin-top: 10px; }
 </style>
 </head>
-
 <body>
 <div class="app">
+
+  <div class="header">
+    <h1>AP Human Geography</h1>
+    <p>Tap card to flip &nbsp;·&nbsp; swipe or arrow keys to navigate &nbsp;·&nbsp; Space to flip</p>
+  </div>
 
   <div class="unit-tabs" id="unitTabs"></div>
 
   <div class="top-row">
-    <button onclick="shuffleDeck()">Shuffle</button>
-    <button onclick="resetDeck()">Reset</button>
-    <button onclick="toggleFlip()">Flip</button>
+    <button class="btn" onclick="shuffleDeck()">⇄ Shuffle</button>
+    <button class="btn" onclick="resetDeck()">↺ Reset</button>
+    <button class="btn" onclick="doFlip()">⟳ Flip</button>
   </div>
 
-  <div class="card-area" id="cardArea">
-    <div class="card-inner" id="cardInner">
+  <div class="review-banner idle" id="reviewBanner">
+    <span id="reviewBannerText"></span>
+    <button class="rbtn" id="reviewBannerBtn" onclick="toggleReviewMode()"></button>
+  </div>
 
-      <div class="card-face">
-        <div class="card-label">Term</div>
-        <div class="card-term" id="term"></div>
+  <div class="card-viewport" id="cardViewport">
+    <div class="card-slider" id="cardSlider">
+
+      <div class="card-ghost" id="cardGhost" style="left:-100%">
+        <div class="ghost-label" id="ghostLabel">Term</div>
+        <div class="ghost-term"  id="ghostTerm"></div>
       </div>
 
-      <div class="card-face card-back">
-        <div class="card-label">Definition</div>
-        <div class="card-def" id="def"></div>
+      <div class="card-area" id="cardArea" onclick="doFlip()">
+        <div class="card-inner" id="cardInner">
+          <div class="card-face card-front">
+            <div class="card-label">Term</div>
+            <div class="card-term" id="term"></div>
+            <div class="flip-hint">tap to reveal</div>
+          </div>
+          <div class="card-face card-back">
+            <div class="card-label">Definition</div>
+            <div class="card-def" id="def"></div>
+          </div>
+        </div>
       </div>
 
     </div>
   </div>
 
-  <!-- LEFT / RIGHT BUTTONS (requested) -->
-  <div class="nav-row">
-    <button onclick="prev()">← Prev</button>
-    <button onclick="next()">Next →</button>
+  <div class="completion" id="completion">
+    <div class="c-emoji" id="cEmoji"></div>
+    <h2 id="cTitle"></h2>
+    <p  id="cSub"></p>
   </div>
 
-  <div class="hint">Tap to flip • Swipe left/right also works</div>
-  <div class="progress" id="progress"></div>
+  <div class="progress-wrap">
+    <div class="progress-bar">
+      <div class="bar-got"  id="barGot"  style="width:0%"></div>
+      <div class="bar-miss" id="barMiss" style="width:0%"></div>
+    </div>
+    <div class="progress-meta">
+      <span class="pill"><span class="dot dot-g"></span><span id="lblGot">0 got it</span></span>
+      <span class="progress-pos" id="lblPos"></span>
+      <span class="pill"><span class="dot dot-r"></span><span id="lblMiss">0 missed</span></span>
+    </div>
+  </div>
+
+  <div class="nav-row">
+    <button class="btn" onclick="navigate(-1)">← Prev</button>
+    <button class="btn" onclick="navigate(1)">Next →</button>
+  </div>
+
+  <div class="grade-wrap" id="gradeWrap">
+    <div class="grade-row">
+      <button class="btn-got"  onclick="grade('got')">Got it ✓</button>
+      <button class="btn-miss" onclick="grade('miss')">Still learning ✗</button>
+    </div>
+  </div>
+
+  <div class="swipe-hint">Swipe left / right &nbsp;·&nbsp; ← → keys &nbsp;·&nbsp; 1 = got it &nbsp;·&nbsp; 2 = missed</div>
 
 </div>
-
 <script>
+// ─────────────────────────────────────────
+//  CARD DATA  —  paste your array here
+// ─────────────────────────────────────────
 const ALL = [
-{u:"Unit 1",t:"Spatial distribution",d:"How things are spread across Earth's surface — described by how dense, clustered, or patterned they are."},
+  {u:"Unit 1",t:"Spatial distribution",d:"How things are spread across Earth's surface — described by how dense, clustered, or patterned they are."},
   {u:"Unit 1",t:"Large-scale vs. small-scale map",d:"Large-scale maps show a small area in high detail (e.g., a city); small-scale maps show a large area with low detail (e.g., a continent). The 'scale' refers to the map's fraction, not the size of the area shown."},
   {u:"Unit 1",t:"Reference map",d:"A map showing where things are — roads, cities, borders, landforms. Used for navigation and finding locations (e.g., road maps, political maps)."},
   {u:"Unit 1",t:"GIS",d:"A computer system that stores and analyzes geographic data in layered maps, helping users spot patterns and relationships."},
@@ -432,89 +689,254 @@ const ALL = [
   {u:"Unit 7",t:"Economic development",d:"The process of improving a country's economic, political, and social well-being; measured by GDP, HDI, and other quality-of-life indicators."}
 ];
 
-let deck = [...ALL];
-let i = 0;
-let flipped = false;
-let activeUnit = "All";
+// ─────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────
+const STORAGE_KEY = 'aphug_progress_v1';
+let activeUnit = 'All';
+let deck       = [];
+let idx        = 0;
+let flipped    = false;
+let reviewMode = false;
+let grades     = {};   // { [term]: 'got' | 'miss' }
 
+// ─────────────────────────────────────────
+//  PERSISTENCE
+// ─────────────────────────────────────────
+function saveGrades() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(grades)); } catch(e) {}
+}
+function loadGrades() {
+  try { const r = localStorage.getItem(STORAGE_KEY); if (r) grades = JSON.parse(r); } catch(e) {}
+}
+function clearGrades() { grades = {}; saveGrades(); }
+
+// ─────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────
+function poolFor(unit) {
+  return unit === 'All' ? [...ALL] : ALL.filter(c => c.u === unit);
+}
+function missedIn(unit) { return poolFor(unit).filter(c => grades[c.t] === 'miss'); }
+function allGotIn(unit) {
+  const p = poolFor(unit);
+  return p.length > 0 && p.every(c => grades[c.t] === 'got');
+}
+
+// ─────────────────────────────────────────
+//  RENDER
+// ─────────────────────────────────────────
 function renderTabs() {
-  const units = ["All","Unit 1","Unit 2","Unit 3","Unit 4","Unit 5","Unit 6","Unit 7"];
-  const el = document.getElementById("unitTabs");
-  el.innerHTML = "";
-
+  const units = ['All','Unit 1','Unit 2','Unit 3','Unit 4','Unit 5','Unit 6','Unit 7'];
+  const el = document.getElementById('unitTabs');
+  el.innerHTML = '';
   units.forEach(u => {
-    const b = document.createElement("button");
-    b.className = "unit-tab" + (u === activeUnit ? " active" : "");
-    b.textContent = u;
-    b.onclick = () => {
-      activeUnit = u;
-      deck = u === "All" ? [...ALL] : ALL.filter(x => x.u === u);
-      i = 0;
-      render();
-      renderTabs();
-    };
-    el.appendChild(b);
+    const count    = u === 'All' ? ALL.length : ALL.filter(c => c.u === u).length;
+    const complete = allGotIn(u);
+    const btn = document.createElement('button');
+    btn.className = 'unit-tab' + (u === activeUnit ? ' active' : '') + (complete ? ' complete' : '');
+    btn.innerHTML = `${u} <span style="opacity:.55">(${count})</span><span class="done-dot">✓</span>`;
+    btn.onclick = () => { activeUnit = u; reviewMode = false; buildDeck(); renderTabs(); };
+    el.appendChild(btn);
   });
 }
 
-function render() {
-  if (!deck.length) return;
-
-  document.getElementById("term").textContent = deck[i].t;
-  document.getElementById("def").textContent = deck[i].d;
-
-  document.getElementById("progress").textContent =
-    `${i + 1} / ${deck.length}`;
+function renderBanner() {
+  const banner = document.getElementById('reviewBanner');
+  const txt    = document.getElementById('reviewBannerText');
+  const rbtn   = document.getElementById('reviewBannerBtn');
+  const missed = missedIn(activeUnit);
+  if (reviewMode) {
+    banner.className = 'review-banner active show';
+    txt.textContent  = `Reviewing ${deck.length} missed card${deck.length !== 1 ? 's' : ''}`;
+    rbtn.textContent = '✕ Exit review';
+  } else if (missed.length > 0) {
+    banner.className = 'review-banner idle show';
+    txt.textContent  = `${missed.length} card${missed.length !== 1 ? 's' : ''} still to learn`;
+    rbtn.textContent = 'Review missed →';
+  } else {
+    banner.className = 'review-banner idle';
+  }
 }
 
-function next() {
-  i = (i + 1) % deck.length;
-  flipped = false;
-  document.getElementById("cardInner").classList.remove("flipped");
-  render();
+function renderProgress() {
+  const pool  = poolFor(activeUnit);
+  const gotN  = pool.filter(c => grades[c.t] === 'got').length;
+  const missN = pool.filter(c => grades[c.t] === 'miss').length;
+  const total = pool.length || 1;
+  document.getElementById('barGot').style.width  = (gotN  / total * 100) + '%';
+  document.getElementById('barMiss').style.width = (missN / total * 100) + '%';
+  document.getElementById('lblGot').textContent  = gotN  + ' got it';
+  document.getElementById('lblMiss').textContent = missN + ' missed';
+  document.getElementById('lblPos').textContent  =
+    deck.length ? (reviewMode ? '📌 ' : '') + (idx + 1) + ' / ' + deck.length : '';
 }
 
-function prev() {
-  i = (i - 1 + deck.length) % deck.length;
-  flipped = false;
-  document.getElementById("cardInner").classList.remove("flipped");
-  render();
+function renderCard() {
+  const done = deck.length === 0;
+  document.getElementById('cardViewport').style.display = done ? 'none' : '';
+  document.getElementById('completion').classList.toggle('show', done);
+  document.getElementById('gradeWrap').classList.toggle('show', !done && flipped);
+  if (done) { renderCompletion(); }
+  else {
+    document.getElementById('term').textContent = deck[idx].t;
+    document.getElementById('def').textContent  = deck[idx].d;
+  }
+  renderProgress();
+  renderBanner();
 }
 
-function toggleFlip() {
-  flipped = !flipped;
-  document.getElementById("cardInner").classList.toggle("flipped");
+function renderCompletion() {
+  const missed = missedIn(activeUnit);
+  document.getElementById('cEmoji').textContent = missed.length === 0 ? '🎉' : '✅';
+  document.getElementById('cTitle').textContent = missed.length === 0
+    ? (reviewMode ? 'All caught up!' : 'Deck complete!')
+    : 'Round complete!';
+  document.getElementById('cSub').textContent = missed.length === 0
+    ? 'You got every card. Great work!'
+    : `${missed.length} card${missed.length !== 1 ? 's' : ''} still to review — hit "Review missed" to drill them again.`;
+}
+
+// ─────────────────────────────────────────
+//  DECK MANAGEMENT
+// ─────────────────────────────────────────
+function buildDeck() {
+  idx = 0; flipped = false;
+  document.getElementById('cardInner').classList.remove('flipped');
+  document.getElementById('gradeWrap').classList.remove('show');
+  deck = reviewMode ? missedIn(activeUnit) : poolFor(activeUnit);
+  renderCard();
 }
 
 function shuffleDeck() {
   deck.sort(() => Math.random() - 0.5);
-  i = 0;
-  render();
+  idx = 0; flipped = false;
+  document.getElementById('cardInner').classList.remove('flipped');
+  document.getElementById('gradeWrap').classList.remove('show');
+  renderCard();
 }
 
-function resetDeck() {
-  deck = activeUnit === "All" ? [...ALL] : ALL.filter(x => x.u === activeUnit);
-  i = 0;
-  render();
+function resetDeck() { clearGrades(); reviewMode = false; buildDeck(); renderTabs(); }
+
+function toggleReviewMode() {
+  reviewMode = !reviewMode;
+  if (reviewMode && missedIn(activeUnit).length === 0) { reviewMode = false; return; }
+  buildDeck();
 }
 
-/* swipe */
-let startX = 0;
-document.getElementById("cardArea").addEventListener("touchstart", e => {
-  startX = e.touches[0].clientX;
+// ─────────────────────────────────────────
+//  NAVIGATION  (slide animation)
+// ─────────────────────────────────────────
+function navigate(dir) {
+  if (deck.length === 0) return;
+  slideToCard((idx + dir + deck.length) % deck.length, dir);
+}
+
+function slideToCard(nextIdx, dir) {
+  if (nextIdx === idx && deck.length > 1) return;
+  const slider = document.getElementById('cardSlider');
+  const ghost  = document.getElementById('cardGhost');
+
+  // position ghost on the incoming side
+  ghost.style.left = dir > 0 ? '100%' : '-100%';
+  document.getElementById('ghostTerm').textContent = deck[nextIdx].t;
+
+  // snap current card to front face without animation
+  const inner = document.getElementById('cardInner');
+  inner.style.transition = 'none';
+  inner.classList.remove('flipped');
+  void inner.offsetWidth;
+  inner.style.transition = '';
+  flipped = false;
+  document.getElementById('gradeWrap').classList.remove('show');
+
+  // slide
+  slider.classList.add('animating');
+  slider.style.transform = dir > 0 ? 'translateX(-100%)' : 'translateX(100%)';
+
+  slider.addEventListener('transitionend', function handler() {
+    slider.removeEventListener('transitionend', handler);
+    slider.classList.remove('animating');
+    slider.style.transform = '';
+    idx = nextIdx;
+    renderCard();
+  }, { once: true });
+}
+
+// ─────────────────────────────────────────
+//  FLIP
+// ─────────────────────────────────────────
+function doFlip() {
+  if (deck.length === 0) return;
+  flipped = !flipped;
+  document.getElementById('cardInner').classList.toggle('flipped', flipped);
+  document.getElementById('gradeWrap').classList.toggle('show', flipped);
+}
+
+// ─────────────────────────────────────────
+//  GRADING
+// ─────────────────────────────────────────
+function grade(result) {
+  if (deck.length === 0) return;
+  const card = deck[idx];
+  grades[card.t] = result;
+  saveGrades();
+
+  if (reviewMode && result === 'got') {
+    deck.splice(idx, 1);
+    if (deck.length === 0) { flipped = false; renderCard(); return; }
+    idx = idx % deck.length;
+    flipped = false;
+    document.getElementById('cardInner').classList.remove('flipped');
+    document.getElementById('gradeWrap').classList.remove('show');
+    renderCard();
+    return;
+  }
+
+  // last card in deck
+  if (idx === deck.length - 1) {
+    deck = [];
+    flipped = false;
+    document.getElementById('cardInner').classList.remove('flipped');
+    document.getElementById('gradeWrap').classList.remove('show');
+    renderCard();
+  } else {
+    slideToCard(idx + 1, 1);
+  }
+}
+
+// ─────────────────────────────────────────
+//  TOUCH SWIPE
+// ─────────────────────────────────────────
+let tsX = 0, tsY = 0;
+document.getElementById('cardViewport').addEventListener('touchstart', e => {
+  tsX = e.touches[0].clientX; tsY = e.touches[0].clientY;
+}, { passive: true });
+document.getElementById('cardViewport').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tsX;
+  const dy = e.changedTouches[0].clientY - tsY;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40)
+    dx < 0 ? navigate(1) : navigate(-1);
+}, { passive: true });
+
+// ─────────────────────────────────────────
+//  KEYBOARD
+// ─────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); navigate(1); }
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); navigate(-1); }
+  if (e.key === ' ')          { e.preventDefault(); doFlip(); }
+  if (e.key === '1' && flipped) grade('got');
+  if (e.key === '2' && flipped) grade('miss');
 });
 
-document.getElementById("cardArea").addEventListener("touchend", e => {
-  const dx = e.changedTouches[0].clientX - startX;
-  if (Math.abs(dx) > 50) dx < 0 ? next() : prev();
-});
-
-/* tap flip */
-document.getElementById("cardArea").onclick = toggleFlip;
-
+// ─────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────
+loadGrades();
+buildDeck();
 renderTabs();
-render();
 </script>
-
 </body>
 </html>
